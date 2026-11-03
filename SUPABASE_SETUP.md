@@ -18,12 +18,15 @@ Supabase dashboard → SQL editor → paste and run `supabase/migrations/001_ini
 3. Authentication → Providers → Email: turn **off** "Allow new users to sign up", so only admins can create accounts.
 
 ## 3. Edge Function (lets admins create users)
+The CLI cannot be installed with `npm -g`; run it through `npx` (add `--use-api` to the last command if it asks for Docker):
 ```
-npm i -g supabase
-supabase login
-supabase link --project-ref YOUR-PROJECT-REF
-supabase functions deploy admin-users
+npx supabase@latest login
+npx supabase@latest link --project-ref YOUR-PROJECT-REF
+npx supabase@latest functions deploy admin-users
 ```
+Or, with no CLI: dashboard -> Edge Functions -> Deploy a new function -> Via Editor, name it exactly
+`admin-users`, and paste in `supabase/functions/admin-users/index.ts`.
+
 `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are provided to functions automatically.
 
 ## 4. Front end
