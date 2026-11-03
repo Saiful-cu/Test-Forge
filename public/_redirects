@@ -1,0 +1,2 @@
+/* Netlify / Cloudflare Pages: serve index.html for /admin so domain/admin works */
+/*  /index.html  200
