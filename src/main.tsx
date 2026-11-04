@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { HashRouter } from 'react-router-dom'
+import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { AuthProvider } from './store/AuthContext'
 import { StoreProvider } from './store/StoreContext'
@@ -10,12 +10,10 @@ import './index.css'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {/*
-      Hash routing keeps every route inside index.html, so a refresh or a shared
-      deep link resolves without a server-side rewrite rule. That makes the build
-      portable across static hosts; swap in BrowserRouter if clean paths are
-      wanted and the host is configured to fall back to index.html.
+      Clean paths (no #). Deep links and refreshes rely on the host serving
+      index.html for unknown paths — see public/_redirects and netlify.toml.
     */}
-    <HashRouter>
+    <BrowserRouter>
       <AuthProvider>
         <MasterLibraryProvider>
           <StoreProvider>
@@ -23,6 +21,6 @@ createRoot(document.getElementById('root')!).render(
           </StoreProvider>
         </MasterLibraryProvider>
       </AuthProvider>
-    </HashRouter>
+    </BrowserRouter>
   </StrictMode>,
 )

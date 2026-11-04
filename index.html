@@ -14,9 +14,9 @@
   </head>
   <body>
     <script>
-      // Serve domain/admin by handing the path to the hash router (needs the host to fall back to index.html).
-      if (/\/admin\/?$/.test(location.pathname)) {
-        location.replace(location.pathname.replace(/admin\/?$/, '') + '#/admin')
+      // Upgrade old hash links (e.g. /#/test-cases) to clean paths.
+      if (location.hash.startsWith('#/')) {
+        history.replaceState(null, '', location.hash.slice(1))
       }
     </script>
     <div id="root"></div>

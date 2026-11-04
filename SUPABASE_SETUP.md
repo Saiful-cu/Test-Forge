@@ -38,4 +38,4 @@ npm run dev      # local
 npm run build    # produces dist/ — deploy it to your static host, with the same two env vars set there
 ```
 For `yourdomain/admin` to work, the host must serve `index.html` for unknown paths
-(`public/_redirects` does this on Netlify and Cloudflare Pages). `yourdomain/#/admin` always works.
+(`public/_redirects` and `netlify.toml` do this on Netlify and Cloudflare Pages).

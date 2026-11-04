@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { CheckCircle2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { Button } from '../components/ui'
 import { useAuth } from '../store/AuthContext'
 
@@ -48,9 +49,9 @@ export function AdminLogin() {
         <Button type="submit" variant="primary" disabled={busy || !username || !password} className="mt-5 w-full">
           {busy ? 'Signing in…' : 'Sign in'}
         </Button>
-        <a href="#/" className="mt-3 block text-center text-xs text-slate-500 hover:text-slate-700">
+        <Link to="/" className="mt-3 block text-center text-xs text-slate-500 hover:text-slate-700">
           Continue without signing in
-        </a>
+        </Link>
       </form>
     </div>
   )
