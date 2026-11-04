@@ -1,2 +1,2 @@
-/* Netlify / Cloudflare Pages: serve index.html for /admin so domain/admin works */
+# Serve index.html for any path (e.g. /admin) so deep links work on Netlify / Cloudflare Pages
 /*  /index.html  200
