@@ -204,6 +204,82 @@ export async function api<T = unknown>(method: string, path: string, body?: any)
       return { project: data }
     }
 
+    /* ------------------------ test case comments & history ---------------------- */
+    if ((m = path.match(/^\/projects\/([^/]+)\/comment-counts$/)) && method === 'GET') {
+      const { data, error } = await sb.from('test_case_comments').select('test_case_id').eq('project_id', m[1]).limit(10000)
+      if (error) fail(error)
+      const counts: Record<string, number> = {}
+      for (const r of data ?? []) counts[r.test_case_id] = (counts[r.test_case_id] ?? 0) + 1
+      return { counts }
+    }
+
+    if ((m = path.match(/^\/projects\/([^/]+)\/test-cases\/([^/]+)\/activity$/)) && method === 'GET') {
+      const [comments, events] = await Promise.all([
+        sb
+          .from('test_case_comments')
+          .select('id, author, body, created_at, edited_at')
+          .eq('project_id', m[1])
+          .eq('test_case_id', m[2])
+          .order('id', { ascending: true })
+          .limit(500),
+        sb
+          .from('test_case_events')
+          .select('id, at, actor, action, field, old_value, new_value')
+          .eq('project_id', m[1])
+          .eq('test_case_id', m[2])
+          .order('id', { ascending: false })
+          .limit(500),
+      ])
+      if (comments.error) fail(comments.error)
+      if (events.error) fail(events.error)
+      return {
+        comments: (comments.data ?? []).map((c) => ({
+          id: c.id,
+          author: c.author,
+          body: c.body,
+          createdAt: c.created_at,
+          editedAt: c.edited_at,
+        })),
+        events: (events.data ?? []).map((e) => ({
+          id: e.id,
+          at: e.at,
+          actor: e.actor,
+          action: e.action,
+          field: e.field,
+          oldValue: e.old_value,
+          newValue: e.new_value,
+        })),
+      }
+    }
+
+    if ((m = path.match(/^\/projects\/([^/]+)\/test-cases\/([^/]+)\/comments$/)) && method === 'POST') {
+      // author and timestamps are set by a database trigger, not trusted from here.
+      const { error } = await sb
+        .from('test_case_comments')
+        .insert({ project_id: m[1], test_case_id: m[2], body: String(body?.body ?? '').trim(), author: '' })
+      if (error) fail(error)
+      return { ok: true }
+    }
+
+    if ((m = path.match(/^\/comments\/(\d+)$/))) {
+      if (method === 'PATCH') {
+        const { data, error } = await sb
+          .from('test_case_comments')
+          .update({ body: String(body?.body ?? '').trim() })
+          .eq('id', Number(m[1]))
+          .select('id')
+        if (error) fail(error)
+        if (!data?.length) throw new ApiError('Only the author or an admin can edit this comment.', 403)
+        return { ok: true }
+      }
+      if (method === 'DELETE') {
+        const { data, error } = await sb.from('test_case_comments').delete().eq('id', Number(m[1])).select('id')
+        if (error) fail(error)
+        if (!data?.length) throw new ApiError('Only the author or an admin can delete this comment.', 403)
+        return { ok: true }
+      }
+    }
+
     /* -------------------------------- audit ------------------------------ */
     if (route === 'GET /audit') {
       const { data, error } = await sb.from('audit_log').select('id, at, actor, action, detail').order('id', { ascending: false }).limit(500)

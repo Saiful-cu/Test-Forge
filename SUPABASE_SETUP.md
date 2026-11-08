@@ -54,3 +54,10 @@ For `yourdomain/admin` to work, the host must serve `index.html` for unknown pat
 API keys are stored in `ai_providers`, which has row-level security on and no policies, so the browser can
 never read them; only the function (service role) does. Generation is limited to signed-in users unless an
 admin ticks "Let signed-out visitors generate test cases". Each generation is written to the activity log.
+
+## 6. Test case comments and history
+SQL editor → run `supabase/migrations/003_test_case_activity.sql`. No function deploy is needed.
+
+History is recorded by a database trigger on `projects`, so it starts from the moment you run this
+migration; earlier changes are not back-filled. Anyone can comment (signed-out comments appear as
+"guest"); only a comment's author or an admin can edit or delete it, and those edits are in the history too.

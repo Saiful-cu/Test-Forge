@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   BarChart3,
@@ -49,6 +49,7 @@ import {
   type TestType,
 } from '../types'
 import { cn, computeGate, computeStats, formatDate } from '../lib/utils'
+import { api } from '../lib/api'
 import { ProjectVersionsDialog } from '../components/ProjectVersionsDialog'
 import { ImportJsonDialog } from '../components/ImportJsonDialog'
 import { AiGenerateDialog } from '../components/AiGenerateDialog'
@@ -73,13 +74,29 @@ function ProjectWorkspace({ project }: { project: Project }) {
   const [priority, setPriority] = useState<string>(ALL)
   const [testType, setTestType] = useState<string>(ALL)
   const [scope, setScope] = useState<string>(ALL)
-  const [openFeatures, setOpenFeatures] = useState<string[]>([])
+  // Coming back from a test case page re-opens the feature it belongs to.
+  const location = useLocation()
+  const [openFeatures, setOpenFeatures] = useState<string[]>(() => {
+    const id = (location.state as { openFeatureId?: string } | null)?.openFeatureId
+    return id ? [id] : []
+  })
   const [collapsedGroups, setCollapsedGroups] = useState<string[]>([])
   // `moduleName: null` imports into a group the person names (from the page header).
   const [importTarget, setImportTarget] = useState<{ moduleName: string | null } | null>(null)
   const [aiTarget, setAiTarget] = useState<{ groupKey: string; featureId?: string } | null>(null)
   const [importNote, setImportNote] = useState<string | null>(null)
-  const [openCase, setOpenCase] = useState<string | null>(null)
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({})
+
+  // One query per project for the comment counts shown on each row; comments themselves load on expand.
+  useEffect(() => {
+    let cancelled = false
+    api<{ counts: Record<string, number> }>('GET', `/projects/${project.id}/comment-counts`)
+      .then((r) => !cancelled && setCommentCounts(r.counts))
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [project.id])
   const [addOpen, setAddOpen] = useState(false)
   const [versionsOpen, setVersionsOpen] = useState(false)
   const [pendingFeatureIds, setPendingFeatureIds] = useState<string[]>([])
@@ -314,8 +331,9 @@ function ProjectWorkspace({ project }: { project: Project }) {
                   <ProjectTestCaseRow
                     key={tc.id}
                     testCase={tc}
-                    expanded={openCase === tc.id}
-                    onToggle={() => setOpenCase(openCase === tc.id ? null : tc.id)}
+                    commentCount={commentCounts[tc.id] ?? 0}
+                    onOpen={() => navigate(`/projects/${project.id}/test-cases/${tc.id}`)}
+                    onEdit={() => navigate(`/projects/${project.id}/test-cases/${tc.id}?edit=1`)}
                     onPatch={(patch) => updateTestCase(project.id, tc.id, patch)}
                     onDelete={() => setDeleteCase(tc)}
                   />
@@ -846,7 +864,6 @@ function ProjectWorkspace({ project }: { project: Project }) {
               onClick={() => {
                 if (deleteCase) {
                   deleteTestCase(project.id, deleteCase.id)
-                  if (openCase === deleteCase.id) setOpenCase(null)
                 }
                 setDeleteCase(null)
               }}

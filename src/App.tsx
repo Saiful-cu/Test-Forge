@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Projects } from './pages/Projects'
 import { CreateProject } from './pages/CreateProject'
 import { ProjectDetail } from './pages/ProjectDetail'
+import { TestCaseDetail } from './pages/TestCaseDetail'
 import { FeatureLibrary } from './pages/FeatureLibrary'
 import { FeatureDetail } from './pages/FeatureDetail'
 import { TestCaseLibrary } from './pages/TestCaseLibrary'
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/projects" element={<Projects />} />
         <Route path="/projects/new" element={<CreateProject />} />
         <Route path="/projects/:projectId" element={<ProjectDetail />} />
+        <Route path="/projects/:projectId/test-cases/:testCaseId" element={<TestCaseDetail />} />
         <Route path="/features" element={<FeatureLibrary />} />
         <Route path="/features/:featureId" element={<FeatureDetail />} />
         <Route path="/test-cases" element={<TestCaseLibrary />} />
