@@ -133,7 +133,7 @@ export function ProjectTestCaseRow({
             {testCase.isMandatory ? <MandatoryBadge size="sm" /> : null}
             {testCase.isCustom ? (
               <Badge size="sm" className="bg-violet-50 text-violet-700 ring-violet-600/20">
-                Custom
+                {testCase.source === 'ai' ? 'AI generated' : testCase.source === 'import' ? 'Imported' : 'Custom'}
               </Badge>
             ) : null}
             {testCase.executedAt ? (

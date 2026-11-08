@@ -12,6 +12,7 @@ import { Reports } from './pages/Reports'
 import { AdminLogin } from './pages/AdminLogin'
 import { UsersPage } from './pages/UsersPage'
 import { HistoryPage } from './pages/HistoryPage'
+import { AiSettingsPage } from './pages/AiSettingsPage'
 import { useAuth } from './store/AuthContext'
 
 function AdminOnly({ children }: { children: ReactNode }) {
@@ -31,6 +32,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/users" element={<AdminOnly><UsersPage /></AdminOnly>} />
         <Route path="/history" element={<AdminOnly><HistoryPage /></AdminOnly>} />
+        <Route path="/ai-settings" element={<AdminOnly><AiSettingsPage /></AdminOnly>} />
         <Route path="/" element={<Dashboard />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/projects/new" element={<CreateProject />} />

@@ -39,3 +39,18 @@ npm run build    # produces dist/ — deploy it to your static host, with the sa
 ```
 For `yourdomain/admin` to work, the host must serve `index.html` for unknown paths
 (`public/_redirects` and `netlify.toml` do this on Netlify and Cloudflare Pages).
+
+## 5. AI test case generation
+1. SQL editor → run `supabase/migrations/002_ai_providers.sql`.
+2. Deploy the `ai` Edge Function, the same way as `admin-users`:
+   ```
+   npx supabase@latest functions deploy ai
+   ```
+   (or dashboard → Edge Functions → Via Editor, name it exactly `ai`, paste `supabase/functions/ai/index.ts`).
+3. Sign in as an admin → **AI settings** → **Add AI provider**. Supported: Anthropic (Claude), OpenAI,
+   Google Gemini, and any OpenAI-compatible API (Groq, Mistral, OpenRouter, DeepSeek, Together, Ollama, …)
+   via its base URL. Use **Test** to check the key and model, and **Use this one** to pick the active provider.
+
+API keys are stored in `ai_providers`, which has row-level security on and no policies, so the browser can
+never read them; only the function (service role) does. Generation is limited to signed-in users unless an
+admin ticks "Let signed-out visitors generate test cases". Each generation is written to the activity log.

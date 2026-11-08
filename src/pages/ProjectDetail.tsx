@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -7,6 +7,7 @@ import {
   ChevronDown,
   CircleSlash,
   FileCheck2,
+  FileJson,
   FolderKanban,
   FolderOpen,
   Layers,
@@ -14,6 +15,7 @@ import {
   RotateCcw,
   SearchX,
   ShieldCheck,
+  Sparkles,
   Trash2,
   XCircle,
 } from 'lucide-react'
@@ -48,6 +50,8 @@ import {
 } from '../types'
 import { cn, computeGate, computeStats, formatDate } from '../lib/utils'
 import { ProjectVersionsDialog } from '../components/ProjectVersionsDialog'
+import { ImportJsonDialog } from '../components/ImportJsonDialog'
+import { AiGenerateDialog } from '../components/AiGenerateDialog'
 
 const ALL = 'all'
 
@@ -60,6 +64,7 @@ function ProjectWorkspace({ project }: { project: Project }) {
     removeFeature,
     addCustomTestCase,
     bulkSetStatus,
+    importFeatures,
   } = useStore()
   const { categoryById, featureById } = useMasterLibrary()
 
@@ -70,6 +75,10 @@ function ProjectWorkspace({ project }: { project: Project }) {
   const [scope, setScope] = useState<string>(ALL)
   const [openFeatures, setOpenFeatures] = useState<string[]>([])
   const [collapsedGroups, setCollapsedGroups] = useState<string[]>([])
+  // `moduleName: null` imports into a group the person names (from the page header).
+  const [importTarget, setImportTarget] = useState<{ moduleName: string | null } | null>(null)
+  const [aiTarget, setAiTarget] = useState<{ groupKey: string; featureId?: string } | null>(null)
+  const [importNote, setImportNote] = useState<string | null>(null)
   const [openCase, setOpenCase] = useState<string | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [versionsOpen, setVersionsOpen] = useState(false)
@@ -183,19 +192,28 @@ function ProjectWorkspace({ project }: { project: Project }) {
 
   // Features are grouped by module (and by source category when pulled in from another one),
   // in the order they first appear in the project.
-  const featureGroups = useMemo(() => {
-    const groups = new Map<string, { key: string; moduleName: string; categoryName: string | null; features: ProjectFeature[] }>()
-    for (const feature of project.features) {
+  const groupInfo = useCallback(
+    (feature: ProjectFeature) => {
       const master = feature.masterFeatureId ? featureById.get(feature.masterFeatureId) : undefined
       const categoryName = master && master.categoryId !== project.categoryId ? master.categoryName : null
       const moduleName = feature.moduleName || (feature.isCustom ? 'Custom features' : 'Other')
-      const key = `${categoryName ?? ''}::${moduleName}`
+      return { key: `${categoryName ?? ''}::${moduleName}`, categoryName, moduleName }
+    },
+    [featureById, project.categoryId],
+  )
+
+  const featureGroups = useMemo(() => {
+    const groups = new Map<string, { key: string; moduleName: string; categoryName: string | null; features: ProjectFeature[] }>()
+    for (const feature of project.features) {
+      const { key, categoryName, moduleName } = groupInfo(feature)
       const group = groups.get(key) ?? { key, moduleName, categoryName, features: [] }
       group.features.push(feature)
       groups.set(key, group)
     }
     return [...groups.values()]
-  }, [project.features, project.categoryId, featureById])
+  }, [project.features, groupInfo])
+
+  const aiGroup = aiTarget ? featureGroups.find((g) => g.key === aiTarget.groupKey) : undefined
 
   const toggleGroup = (key: string) =>
     setCollapsedGroups((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]))
@@ -231,6 +249,11 @@ function ProjectWorkspace({ project }: { project: Project }) {
                 {feature.isCustom ? (
                   <Badge size="sm" className="bg-violet-50 text-violet-700 ring-violet-600/20">
                     Custom feature
+                  </Badge>
+                ) : null}
+                {feature.knowledge ? (
+                  <Badge size="sm" className="bg-sky-50 text-sky-700 ring-sky-600/20">
+                    Has knowledge
                   </Badge>
                 ) : null}
               </span>
@@ -330,9 +353,18 @@ function ProjectWorkspace({ project }: { project: Project }) {
                   Reset shown
                 </Button>
               </div>
-              <Button size="sm" variant="primary" icon={Plus} onClick={() => setCustomFor(feature.id)}>
-                Add test case
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  icon={Sparkles}
+                  onClick={() => setAiTarget({ groupKey: groupInfo(feature).key, featureId: feature.id })}
+                >
+                  Knowledge &amp; AI
+                </Button>
+                <Button size="sm" variant="primary" icon={Plus} onClick={() => setCustomFor(feature.id)}>
+                  Add test case
+                </Button>
+              </div>
             </div>
           </div>
         ) : null}
@@ -358,6 +390,9 @@ function ProjectWorkspace({ project }: { project: Project }) {
         action={
           <>
             <Button onClick={() => setVersionsOpen(true)}>Versions</Button>
+            <Button icon={FileJson} onClick={() => setImportTarget({ moduleName: null })}>
+              Import JSON
+            </Button>
             <Button icon={Plus} onClick={() => setAddOpen(true)} disabled={availableCount === 0}>
               Add features
             </Button>
@@ -545,6 +580,18 @@ function ProjectWorkspace({ project }: { project: Project }) {
         </div>
       </Card>
 
+      {importNote ? (
+        <div
+          role="status"
+          className="mt-4 flex items-center justify-between gap-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+        >
+          <span>{importNote}</span>
+          <button type="button" className="text-xs font-medium hover:underline" onClick={() => setImportNote(null)}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
+
       {project.features.length === 0 ? (
         <Card className="mt-4">
           <EmptyState
@@ -552,9 +599,14 @@ function ProjectWorkspace({ project }: { project: Project }) {
             title="No features selected yet"
             description="Add features from the master library to import their test cases into this project."
             action={
-              <Button variant="primary" icon={Plus} onClick={() => setAddOpen(true)}>
-                Add features
-              </Button>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button variant="primary" icon={Plus} onClick={() => setAddOpen(true)}>
+                  Add features
+                </Button>
+                <Button icon={FileJson} onClick={() => setImportTarget({ moduleName: null })}>
+                  Import JSON
+                </Button>
+              </div>
             }
           />
         </Card>
@@ -567,12 +619,13 @@ function ProjectWorkspace({ project }: { project: Project }) {
 
             return (
               <section key={group.key} className={cn(filtersActive && groupShown === 0 && 'opacity-60')}>
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.key)}
-                  aria-expanded={!collapsed}
-                  className="mb-2 flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-lg px-1 py-1.5 text-left transition hover:bg-slate-100/70"
-                >
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.key)}
+                    aria-expanded={!collapsed}
+                    className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2 rounded-lg px-1 py-1.5 text-left transition hover:bg-slate-100/70"
+                  >
                   <ChevronDown className={cn('h-4 w-4 shrink-0 text-slate-400 transition', collapsed && '-rotate-90')} />
                   <FolderOpen className="h-4 w-4 shrink-0 text-brand-600" />
                   <span className="text-sm font-semibold text-slate-800">{group.moduleName}</span>
@@ -598,7 +651,16 @@ function ProjectWorkspace({ project }: { project: Project }) {
                       {gs.executed}/{gs.total} executed · {gs.executionPct}%
                     </span>
                   </span>
-                </button>
+                  </button>
+                  <div className="flex shrink-0 gap-1.5">
+                    <Button size="sm" icon={FileJson} onClick={() => setImportTarget({ moduleName: group.moduleName })}>
+                      Import JSON
+                    </Button>
+                    <Button size="sm" icon={Sparkles} onClick={() => setAiTarget({ groupKey: group.key })}>
+                      Generate with AI
+                    </Button>
+                  </div>
+                </div>
                 {collapsed ? null : (
                   <div className="space-y-3 border-l-2 border-slate-200 pl-3 sm:ml-2 sm:pl-4">
                     {group.features.map(renderFeature)}
@@ -624,6 +686,36 @@ function ProjectWorkspace({ project }: { project: Project }) {
           ) : null}
         </div>
       )}
+
+      <ImportJsonDialog
+        open={Boolean(importTarget)}
+        onClose={() => setImportTarget(null)}
+        moduleName={importTarget?.moduleName ?? null}
+        existingFeatureNames={
+          importTarget?.moduleName
+            ? project.features.filter((f) => f.moduleName === importTarget.moduleName).map((f) => f.name)
+            : []
+        }
+        onImport={(moduleName, drafts) => {
+          const r = importFeatures(project.id, moduleName, drafts, 'import')
+          setCollapsedGroups((prev) => prev.filter((k) => !k.endsWith(`::${moduleName}`)))
+          setImportNote(
+            `Imported into ${moduleName}: ${r.features} new ${r.features === 1 ? 'feature' : 'features'}` +
+              `${r.mergedInto ? `, ${r.mergedInto} existing updated` : ''}, ${r.testCases} test cases.`,
+          )
+        }}
+      />
+
+      {aiGroup && aiTarget ? (
+        <AiGenerateDialog
+          key={`${aiTarget.groupKey}|${aiTarget.featureId ?? ''}`}
+          project={project}
+          moduleName={aiGroup.moduleName}
+          features={aiGroup.features}
+          initialFeatureId={aiTarget.featureId}
+          onClose={() => setAiTarget(null)}
+        />
+      ) : null}
 
       {/* add features */}
       <ProjectVersionsDialog open={versionsOpen} onClose={() => setVersionsOpen(false)} project={project} />

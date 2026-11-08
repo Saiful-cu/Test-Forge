@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { Project, ProjectFeature, ProjectTestCase } from '../types'
+import type { FeatureDraft, Project, ProjectFeature, ProjectTestCase, TestCaseDraft, TestCaseSource } from '../types'
 import { useMasterLibrary } from './MasterLibraryContext'
 import { useAuth } from './AuthContext'
 import { createSeedProjects } from '../data/seed'
@@ -43,6 +43,19 @@ interface StoreValue {
     >,
   ) => void
   deleteTestCase: (projectId: string, testCaseId: string) => void
+  /** Adds several test cases to one feature in a single change. */
+  addTestCases: (projectId: string, projectFeatureId: string, drafts: TestCaseDraft[], source: TestCaseSource) => void
+  /**
+   * Imports features into a module group. A feature whose name matches one already in that
+   * module receives the test cases instead of being duplicated. Returns what was added.
+   */
+  importFeatures: (
+    projectId: string,
+    moduleName: string,
+    drafts: FeatureDraft[],
+    source: TestCaseSource,
+  ) => { features: number; testCases: number; mergedInto: number }
+  setFeatureKnowledge: (projectId: string, projectFeatureId: string, knowledge: string) => void
   resetDemoData: () => void
   /** Replaces a project with a version restored from the server (a snapshot). */
   replaceProject: (project: Project) => void
@@ -184,6 +197,61 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return project
   }, [buildFeatureAndCases, categoryById])
 
+  const draftToCase = (draft: TestCaseDraft, projectFeatureId: string, source: TestCaseSource): ProjectTestCase => ({
+    ...draft,
+    steps: [...draft.steps],
+    id: uid('ptc'),
+    masterTestCaseId: null,
+    projectFeatureId,
+    status: 'Not Run',
+    actualResult: '',
+    notes: '',
+    executedAt: null,
+    isCustom: true,
+    source,
+  })
+
+  const importFeatures: StoreValue['importFeatures'] = (projectId, moduleName, drafts, source) => {
+    const counts = { features: 0, testCases: 0, mergedInto: 0 }
+    const project = projects.find((p) => p.id === projectId)
+    if (!project) return counts
+    const mod = moduleName.trim() || 'Imported'
+    const features = [...project.features]
+    const testCases = [...project.testCases]
+    const byName = new Map(
+      features.filter((f) => f.moduleName === mod).map((f) => [f.name.trim().toLowerCase(), f]),
+    )
+    for (const draft of drafts) {
+      let feature = byName.get(draft.name.trim().toLowerCase())
+      if (feature) {
+        counts.mergedInto += 1
+        if (draft.knowledge && !feature.knowledge) {
+          const updated = { ...feature, knowledge: draft.knowledge }
+          features[features.indexOf(feature)] = updated
+          feature = updated
+          byName.set(draft.name.trim().toLowerCase(), updated)
+        }
+      } else {
+        feature = {
+          id: uid('pf'),
+          masterFeatureId: null,
+          name: draft.name.trim(),
+          description: draft.description.trim(),
+          moduleName: mod,
+          isCustom: true,
+          knowledge: draft.knowledge.trim() || undefined,
+        }
+        features.push(feature)
+        byName.set(feature.name.toLowerCase(), feature)
+        counts.features += 1
+      }
+      for (const tc of draft.testCases) testCases.push(draftToCase(tc, feature.id, source))
+      counts.testCases += draft.testCases.length
+    }
+    mutate(projectId, (p) => ({ ...p, features, testCases }))
+    return counts
+  }
+
   const value = useMemo<StoreValue>(
     () => ({
       projects,
@@ -277,6 +345,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         })),
       deleteTestCase: (projectId, testCaseId) =>
         mutate(projectId, (p) => ({ ...p, testCases: p.testCases.filter((tc) => tc.id !== testCaseId) })),
+      addTestCases: (projectId, projectFeatureId, drafts, source) =>
+        mutate(projectId, (p) => ({
+          ...p,
+          testCases: [...p.testCases, ...drafts.map((d) => draftToCase(d, projectFeatureId, source))],
+        })),
+      importFeatures,
+      setFeatureKnowledge: (projectId, projectFeatureId, knowledge) =>
+        mutate(projectId, (p) => ({
+          ...p,
+          features: p.features.map((f) =>
+            f.id === projectFeatureId ? { ...f, knowledge: knowledge.trim() || undefined } : f,
+          ),
+        })),
       resetDemoData: () => {
         if (!isAdmin) return
         const seed = createSeedProjects()
@@ -294,6 +375,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ready,
       saveError,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- importFeatures/draftToCase only read `projects` and `mutate`
     [projects, createProject, mutate, buildFeatureAndCases, ready, saveError, isAdmin],
   )
 

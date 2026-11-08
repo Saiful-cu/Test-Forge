@@ -36,8 +36,8 @@ function fail(error: { message: string; code?: string } | null, status = 400): n
   throw new ApiError(error?.message ?? 'Request failed.', forbidden ? 403 : status)
 }
 
-async function invokeAdminUsers<T>(body: object): Promise<T> {
-  const { data, error } = await client().functions.invoke('admin-users', { body })
+async function invokeFunction<T>(name: string, body: object): Promise<T> {
+  const { data, error } = await client().functions.invoke(name, { body })
   if (error) {
     // functions.invoke hides the JSON error body inside the response context.
     const res = (error as { context?: Response }).context
@@ -46,6 +46,9 @@ async function invokeAdminUsers<T>(body: object): Promise<T> {
   }
   return data as T
 }
+
+const invokeAdminUsers = <T,>(body: object) => invokeFunction<T>('admin-users', body)
+const invokeAi = <T,>(body: object) => invokeFunction<T>('ai', body)
 
 async function currentUser() {
   const sb = client()
@@ -87,6 +90,20 @@ export async function api<T = unknown>(method: string, path: string, body?: any)
     if (route === 'POST /users') return invokeAdminUsers({ action: 'create', ...body })
     if ((m = path.match(/^\/users\/([^/]+)$/)) && method === 'PATCH') {
       return invokeAdminUsers({ action: 'update', id: m[1], ...body })
+    }
+
+    /* --------------------------------- ai -------------------------------- */
+    if (route === 'GET /ai/status') return invokeAi({ action: 'status' })
+    if (route === 'GET /ai/providers') return invokeAi({ action: 'list' })
+    if (route === 'POST /ai/providers') return invokeAi({ action: 'save', ...body })
+    if (route === 'PUT /ai/settings') return invokeAi({ action: 'settings', ...body })
+    if (route === 'POST /ai/generate') return invokeAi({ action: 'generate', ...body })
+    if ((m = path.match(/^\/ai\/providers\/([^/]+)$/))) {
+      if (method === 'PATCH') return invokeAi({ action: 'save', ...body, id: m[1] })
+      if (method === 'DELETE') return invokeAi({ action: 'delete', id: m[1] })
+    }
+    if ((m = path.match(/^\/ai\/providers\/([^/]+)\/(activate|test)$/)) && method === 'POST') {
+      return invokeAi({ action: m[2], id: m[1] })
     }
 
     /* ------------------------------ library ------------------------------ */

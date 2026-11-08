@@ -15,6 +15,7 @@ import {
   Menu,
   Plus,
   RotateCcw,
+  Sparkles,
   X,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
@@ -63,6 +64,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             ? [
                 { to: '/users', label: 'Users & access', icon: Users, end: false },
                 { to: '/history', label: 'History', icon: History, end: false },
+                { to: '/ai-settings', label: 'AI settings', icon: Sparkles, end: false },
               ]
             : []),
         ].map((item) => (
