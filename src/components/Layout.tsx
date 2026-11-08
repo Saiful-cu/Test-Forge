@@ -1,21 +1,18 @@
 import { useMemo, useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   AlertTriangle,
   BarChart3,
   CheckCircle2,
-  FileCheck2,
   FolderKanban,
   LayoutDashboard,
   Layers,
-  History,
   LogIn,
   LogOut,
-  Users,
   Menu,
   Plus,
   RotateCcw,
-  Sparkles,
+  Settings,
   X,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
@@ -31,7 +28,6 @@ const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/projects', label: 'Projects', icon: FolderKanban, end: false },
   { to: '/features', label: 'Feature Library', icon: Layers, end: false },
-  { to: '/test-cases', label: 'Test Case Library', icon: FileCheck2, end: false },
   { to: '/reports', label: 'Reports', icon: BarChart3, end: false },
 ]
 
@@ -45,110 +41,120 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   // reading the database back would race the save that follows each change.
   const footprint = useMemo(() => new Blob([JSON.stringify(projects)]).size, [projects])
 
+  const navItems = [...NAV, ...(isAdmin ? [{ to: '/settings', label: 'Settings', icon: Settings, end: false }] : [])]
+
   return (
     <>
-      <div className="flex h-14 items-center gap-2.5 border-b border-slate-200 px-4">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-          <CheckCircle2 style={{ width: 18, height: 18 }} />
+      <div className="flex h-16 items-center gap-3 px-5">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-lg shadow-brand-900/40 ring-1 ring-inset ring-white/20">
+          <CheckCircle2 style={{ width: 19, height: 19 }} />
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold tracking-tight text-slate-900">TestForge</p>
-          <p className="truncate text-2xs text-slate-500">Feature &amp; QA Management</p>
+          <p className="truncate text-[0.95rem] font-semibold tracking-tight text-white">TestForge</p>
+          <p className="truncate text-2xs text-slate-400">Feature &amp; QA Management</p>
         </div>
       </div>
 
-      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-        {[
-          ...NAV,
-          ...(isAdmin
-            ? [
-                { to: '/users', label: 'Users & access', icon: Users, end: false },
-                { to: '/history', label: 'History', icon: History, end: false },
-                { to: '/ai-settings', label: 'AI settings', icon: Sparkles, end: false },
-              ]
-            : []),
-        ].map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition',
-                isActive
-                  ? 'bg-brand-50 text-brand-700'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-              )
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <item.icon className={cn('h-4 w-4', isActive ? 'text-brand-600' : 'text-slate-400')} />
-                <span className="flex-1 truncate">{item.label}</span>
-                {item.to === '/projects' && projects.length > 0 ? (
-                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-2xs font-semibold tabular-nums text-slate-600">
-                    {projects.length}
-                  </span>
-                ) : null}
-              </>
-            )}
-          </NavLink>
-        ))}
+      <nav className="flex-1 overflow-y-auto px-3 pb-3 pt-2">
+        <p className="px-3 pb-2 text-2xs font-semibold uppercase tracking-[0.12em] text-slate-500">Workspace</p>
+        <div className="space-y-0.5">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                cn(
+                  'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition',
+                  isActive ? 'bg-white/[0.08] text-white' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-100',
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive ? (
+                    <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-r-full bg-brand-400" aria-hidden />
+                  ) : null}
+                  <item.icon
+                    className={cn('h-[18px] w-[18px]', isActive ? 'text-brand-300' : 'text-slate-500 group-hover:text-slate-300')}
+                  />
+                  <span className="flex-1 truncate">{item.label}</span>
+                  {item.to === '/projects' && projects.length > 0 ? (
+                    <span
+                      className={cn(
+                        'rounded-full px-2 py-px text-2xs font-semibold tabular-nums',
+                        isActive ? 'bg-brand-500/25 text-brand-100' : 'bg-white/[0.06] text-slate-400',
+                      )}
+                    >
+                      {projects.length}
+                    </span>
+                  ) : null}
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
 
-        <div className="pt-4">
-          <p className="px-2.5 pb-2 text-2xs font-semibold uppercase tracking-wider text-slate-400">
-            Master library
-          </p>
-          <dl className="space-y-1.5 px-2.5 text-xs">
+        <div className="mt-6">
+          <p className="px-3 pb-2 text-2xs font-semibold uppercase tracking-[0.12em] text-slate-500">Master library</p>
+          <dl className="grid grid-cols-2 gap-1.5 px-1">
             {[
               ['Categories', stats.categories],
               ['Modules', stats.modules],
               ['Features', stats.features],
               ['Test cases', stats.testCases],
             ].map(([label, value]) => (
-              <div key={label as string} className="flex items-center justify-between">
-                <dt className="text-slate-500">{label}</dt>
-                <dd className="font-medium tabular-nums text-slate-700">{value}</dd>
+              <div key={label as string} className="rounded-lg bg-white/[0.03] px-2.5 py-2 ring-1 ring-inset ring-white/[0.05]">
+                <dd className="text-sm font-semibold tabular-nums text-slate-100">{Number(value).toLocaleString()}</dd>
+                <dt className="text-2xs text-slate-500">{label}</dt>
               </div>
             ))}
           </dl>
         </div>
       </nav>
 
-      <div className="border-t border-slate-200 p-3">
-        <div className="mb-1 flex items-center justify-between px-2.5 text-2xs">
-          <span className="text-slate-400">Stored locally</span>
-          <span className="font-medium tabular-nums text-slate-600" title="Projects held in this browser's IndexedDB">
+      <div className="space-y-1 border-t border-white/[0.06] p-3">
+        <div className="flex items-center justify-between px-3 pb-1 text-2xs">
+          <span className="text-slate-500">Project data</span>
+          <span className="font-medium tabular-nums text-slate-400" title="Size of all project data">
             {formatBytes(footprint)}
           </span>
         </div>
         {isAdmin ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={RotateCcw}
-            className="w-full justify-start"
+          <button
+            type="button"
             onClick={() => setConfirmReset(true)}
+            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-100"
           >
+            <RotateCcw className="h-3.5 w-3.5" />
             Reset demo data
-          </Button>
+          </button>
         ) : null}
         {user ? (
-          <>
-            <p className="px-2.5 pt-1 text-2xs text-slate-400">
-              Signed in as <span className="font-medium text-slate-600">{user.username}</span>
-              {isAdmin ? ' (admin)' : ''}
-            </p>
-            <Button variant="ghost" size="sm" icon={LogOut} className="w-full justify-start" onClick={() => void logout()}>
-              Sign out
-            </Button>
-          </>
+          <div className="mt-1 flex items-center gap-2.5 rounded-xl bg-white/[0.04] p-2 ring-1 ring-inset ring-white/[0.05]">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-400 to-violet-500 text-xs font-semibold uppercase text-white">
+              {user.username.slice(0, 2)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-slate-100">{user.username}</p>
+              <p className="truncate text-2xs text-slate-500">{isAdmin ? 'Administrator' : 'Member'}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void logout()}
+              title="Sign out"
+              aria-label="Sign out"
+              className="rounded-lg p-1.5 text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-100"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         ) : (
           <Link
             to="/admin"
             onClick={onNavigate}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+            className="mt-1 flex items-center justify-center gap-2 rounded-lg bg-white/[0.06] px-3 py-2 text-xs font-medium text-slate-200 ring-1 ring-inset ring-white/[0.06] transition hover:bg-white/[0.1] hover:text-white"
           >
             <LogIn className="h-3.5 w-3.5" />
             Admin sign in
@@ -212,11 +218,12 @@ export function Layout() {
   const { ready, saveError } = useStore()
   const { syncError } = useMasterLibrary()
   const navigate = useNavigate()
+  const location = useLocation()
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-canvas">
       {/* desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-ink-900 lg:flex">
         <SidebarContent />
       </aside>
 
@@ -224,16 +231,16 @@ export function Layout() {
       {mobileOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            className="absolute inset-0 animate-fade-in bg-ink-950/60 backdrop-blur-[2px]"
             onClick={() => setMobileOpen(false)}
             role="presentation"
           />
-          <aside className="relative flex h-full w-64 flex-col border-r border-slate-200 bg-white">
+          <aside className="relative flex h-full w-72 animate-rise-in flex-col bg-ink-900">
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
               aria-label="Close navigation"
-              className="absolute right-2 top-3 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
+              className="absolute right-3 top-4 rounded-lg p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"
             >
               <X className="h-4 w-4" />
             </button>
@@ -243,7 +250,7 @@ export function Layout() {
       ) : null}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur lg:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200/70 bg-white/75 px-4 backdrop-blur-md lg:px-8">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -270,7 +277,7 @@ export function Layout() {
           <GlobalSearch />
         </div>
 
-        <main className="min-w-0 flex-1 p-4 lg:p-6">
+        <main className="min-w-0 flex-1 p-4 lg:px-8 lg:py-7">
           <div className="mx-auto max-w-[1400px]">
             {syncError ? (
               <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">{syncError}</div>
@@ -284,7 +291,13 @@ export function Layout() {
                 </div>
               </div>
             ) : null}
-            {ready ? <Outlet /> : <LoadingState />}
+            {ready ? (
+              <div key={location.pathname} className="animate-rise-in">
+                <Outlet />
+              </div>
+            ) : (
+              <LoadingState />
+            )}
           </div>
         </main>
       </div>

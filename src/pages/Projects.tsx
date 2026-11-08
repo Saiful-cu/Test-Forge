@@ -118,7 +118,7 @@ export function Projects() {
           {filtered.map((p) => {
             const s = computeStats(p.testCases)
             return (
-              <Card key={p.id} className="flex flex-col p-5">
+              <Card key={p.id} className="card-interactive flex flex-col p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <Link

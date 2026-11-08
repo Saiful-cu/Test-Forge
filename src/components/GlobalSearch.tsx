@@ -95,14 +95,13 @@ export function GlobalSearch() {
       }
     }
 
-    // The dropdown only reaches cases inside matching features, so always offer the full
-    // library search, which does scan every test case title.
+    // Always offer the full feature library search; test cases live under their features.
     out.push({
       key: 'all',
-      kind: 'Test case',
-      title: `Search all test cases for “${query.trim()}”`,
-      subtitle: 'Opens the master test case library with this search applied',
-      to: `/test-cases?q=${encodeURIComponent(query.trim())}`,
+      kind: 'Feature',
+      title: `Search the feature library for “${query.trim()}”`,
+      subtitle: 'Opens the feature library with this search applied',
+      to: `/features?q=${encodeURIComponent(query.trim())}`,
     })
 
     return out

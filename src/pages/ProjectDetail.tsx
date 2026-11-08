@@ -513,7 +513,7 @@ function ProjectWorkspace({ project }: { project: Project }) {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <Card className="col-span-2 p-4 lg:col-span-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Execution</p>
+          <p className="text-xs font-medium text-slate-500">Execution</p>
           <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{stats.executionPct}%</p>
           <ProgressBar value={stats.executionPct} className="mt-3" />
           <p className="mt-2 text-xs text-slate-500">
@@ -637,7 +637,7 @@ function ProjectWorkspace({ project }: { project: Project }) {
 
             return (
               <section key={group.key} className={cn(filtersActive && groupShown === 0 && 'opacity-60')}>
-                <div className="mb-2 flex flex-wrap items-center gap-2">
+                <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/70 bg-white/70 px-2 py-1.5 shadow-sm">
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.key)}
@@ -665,7 +665,7 @@ function ProjectWorkspace({ project }: { project: Project }) {
                         { label: 'Not Run', value: gs.notRun, className: 'bg-slate-200' },
                       ]}
                     />
-                    <span className="text-2xs tabular-nums text-slate-500">
+                    <span className="whitespace-nowrap text-2xs tabular-nums text-slate-500">
                       {gs.executed}/{gs.total} executed · {gs.executionPct}%
                     </span>
                   </span>

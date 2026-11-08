@@ -118,7 +118,7 @@ export function Dashboard() {
           hint={gate.outstanding === 0 ? 'All release gates met' : `${gate.outstanding} outstanding`}
         />
         <Card className="p-4">
-          <p className="truncate text-xs font-medium uppercase tracking-wide text-slate-500">Overall execution</p>
+          <p className="truncate text-xs font-medium text-slate-500">Overall execution</p>
           <div className="mt-2 flex items-end justify-between gap-2">
             <p className="text-2xl font-semibold tracking-tight text-slate-900">{stats.executionPct}%</p>
             <Badge className="bg-brand-50 text-brand-700 ring-brand-600/20">
@@ -204,7 +204,7 @@ export function Dashboard() {
 
         <Card className="self-start">
           <CardHeader title="Execution breakdown" subtitle="All projects combined" />
-          <div className="flex flex-col items-center gap-6 px-5 py-6 sm:flex-row">
+          <div className="flex flex-col items-center gap-6 px-5 py-6 sm:flex-row lg:flex-col [&>ul]:w-full">
             <DonutChart
               segments={donut}
               centerValue={`${stats.executionPct}%`}
@@ -246,7 +246,7 @@ export function Dashboard() {
                   <Link
                     key={p.id}
                     to={`/projects/${p.id}`}
-                    className="group rounded-lg border border-slate-200 p-4 transition hover:border-brand-300 hover:bg-brand-50/30"
+                    className="card-interactive group rounded-xl border border-slate-200 bg-white p-4 hover:border-brand-300"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">

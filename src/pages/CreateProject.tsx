@@ -377,7 +377,7 @@ export function CreateProject() {
                   ] as Array<[string, string]>
                 ).map(([label, value]) => (
                   <div key={label} className="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
-                    <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
+                    <dt className="text-xs font-medium text-slate-500">{label}</dt>
                     <dd className="text-sm text-slate-800">{value}</dd>
                   </div>
                 ))}

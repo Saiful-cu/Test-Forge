@@ -8,12 +8,12 @@ import { ProjectDetail } from './pages/ProjectDetail'
 import { TestCaseDetail } from './pages/TestCaseDetail'
 import { FeatureLibrary } from './pages/FeatureLibrary'
 import { FeatureDetail } from './pages/FeatureDetail'
-import { TestCaseLibrary } from './pages/TestCaseLibrary'
 import { Reports } from './pages/Reports'
 import { AdminLogin } from './pages/AdminLogin'
 import { UsersPage } from './pages/UsersPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { AiSettingsPage } from './pages/AiSettingsPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { useAuth } from './store/AuthContext'
 
 function AdminOnly({ children }: { children: ReactNode }) {
@@ -31,9 +31,16 @@ export default function App() {
       <Route path="/admin" element={user ? <Navigate to="/" replace /> : <AdminLogin />} />
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <AdminLogin />} />
       <Route element={<Layout />}>
-        <Route path="/users" element={<AdminOnly><UsersPage /></AdminOnly>} />
-        <Route path="/history" element={<AdminOnly><HistoryPage /></AdminOnly>} />
-        <Route path="/ai-settings" element={<AdminOnly><AiSettingsPage /></AdminOnly>} />
+        <Route path="/settings" element={<AdminOnly><SettingsPage /></AdminOnly>}>
+          <Route index element={<Navigate to="users" replace />} />
+          <Route path="users" element={<UsersPage />} />
+          <Route path="history" element={<HistoryPage />} />
+          <Route path="ai" element={<AiSettingsPage />} />
+        </Route>
+        {/* Old addresses from before the pages were combined under Settings. */}
+        <Route path="/users" element={<Navigate to="/settings/users" replace />} />
+        <Route path="/history" element={<Navigate to="/settings/history" replace />} />
+        <Route path="/ai-settings" element={<Navigate to="/settings/ai" replace />} />
         <Route path="/" element={<Dashboard />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/projects/new" element={<CreateProject />} />
@@ -41,7 +48,8 @@ export default function App() {
         <Route path="/projects/:projectId/test-cases/:testCaseId" element={<TestCaseDetail />} />
         <Route path="/features" element={<FeatureLibrary />} />
         <Route path="/features/:featureId" element={<FeatureDetail />} />
-        <Route path="/test-cases" element={<TestCaseLibrary />} />
+        {/* The test case library was folded into the feature library; keep old links working. */}
+        <Route path="/test-cases" element={<Navigate to="/features" replace />} />
         <Route path="/reports" element={<Reports />} />
         <Route path="/reports/:projectId" element={<Reports />} />
         <Route path="*" element={<Navigate to="/" replace />} />

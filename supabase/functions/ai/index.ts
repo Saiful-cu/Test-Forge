@@ -232,7 +232,7 @@ Deno.serve(async (req) => {
           provider: p ? { label: p.label, model: p.model } : null,
           canGenerate: Boolean(p) && (signedIn || guests),
           reason: !p
-            ? 'No AI provider is set up yet. An admin can add one under AI settings.'
+            ? 'No AI provider is set up yet. An admin can add one under Settings → AI settings.'
             : !signedIn && !guests
               ? 'Sign in to generate test cases with AI.'
               : null,
@@ -319,7 +319,7 @@ Deno.serve(async (req) => {
       /* -------- generate test cases -------- */
       case 'generate': {
         const p = await activeProvider()
-        if (!p) throw new HttpError('No AI provider is set up yet. An admin can add one under AI settings.', 409)
+        if (!p) throw new HttpError('No AI provider is set up yet. An admin can add one under Settings → AI settings.', 409)
         if (!signedIn && !(await allowGuests())) throw new HttpError('Sign in to generate test cases with AI.', 401)
 
         const featureName = String(body.featureName ?? '').trim().slice(0, 200)

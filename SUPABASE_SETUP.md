@@ -47,7 +47,7 @@ For `yourdomain/admin` to work, the host must serve `index.html` for unknown pat
    npx supabase@latest functions deploy ai
    ```
    (or dashboard → Edge Functions → Via Editor, name it exactly `ai`, paste `supabase/functions/ai/index.ts`).
-3. Sign in as an admin → **AI settings** → **Add AI provider**. Supported: Anthropic (Claude), OpenAI,
+3. Sign in as an admin → **Settings** → **AI settings** → **Add AI provider**. Supported: Anthropic (Claude), OpenAI,
    Google Gemini, and any OpenAI-compatible API (Groq, Mistral, OpenRouter, DeepSeek, Together, Ollama, …)
    via its base URL. Use **Test** to check the key and model, and **Use this one** to pick the active provider.
 

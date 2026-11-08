@@ -101,12 +101,13 @@ type ButtonSize = 'sm' | 'md'
 
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    'bg-brand-600 text-white shadow-sm hover:bg-brand-700 focus-visible:ring-brand-500/40 disabled:bg-brand-300',
+    'bg-gradient-to-b from-brand-500 to-brand-600 text-white shadow-sm shadow-brand-600/20 hover:from-brand-600 hover:to-brand-700 focus-visible:ring-brand-500/30',
   secondary:
-    'border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50 focus-visible:ring-slate-400/30',
-  ghost: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-400/30',
-  subtle: 'bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-400/30',
-  danger: 'bg-rose-600 text-white shadow-sm hover:bg-rose-700 focus-visible:ring-rose-500/40',
+    'border border-slate-200 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-slate-400/20',
+  ghost: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-400/20',
+  subtle: 'bg-slate-100 text-slate-700 hover:bg-slate-200 focus-visible:ring-slate-400/20',
+  danger:
+    'bg-gradient-to-b from-rose-500 to-rose-600 text-white shadow-sm shadow-rose-600/20 hover:from-rose-600 hover:to-rose-700 focus-visible:ring-rose-500/30',
 }
 
 const BUTTON_SIZES: Record<ButtonSize, string> = {
@@ -132,8 +133,8 @@ export function Button({
     <button
       type="button"
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-lg font-medium transition',
-        'focus:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex shrink-0 select-none items-center justify-center rounded-lg font-medium transition duration-150',
+        'focus:outline-none focus-visible:ring-4 active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55',
         BUTTON_VARIANTS[variant],
         BUTTON_SIZES[size],
         className,
@@ -194,8 +195,8 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-md font-medium ring-1 ring-inset',
-        size === 'sm' ? 'px-1.5 py-0.5 text-2xs' : 'px-2 py-0.5 text-xs',
+        'inline-flex items-center gap-1 whitespace-nowrap rounded-full font-medium ring-1 ring-inset',
+        size === 'sm' ? 'px-2 py-px text-2xs' : 'px-2.5 py-0.5 text-xs',
         className ?? 'bg-slate-100 text-slate-600 ring-slate-500/20',
       )}
     >
@@ -278,9 +279,9 @@ export function PageHeader({
 }) {
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
-        {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
+      <div className="min-w-0">
+        <h1 className="text-[1.375rem] font-semibold leading-tight tracking-tight text-slate-900">{title}</h1>
+        {subtitle ? <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-slate-500">{subtitle}</p> : null}
       </div>
       {/* Wraps rather than overflowing: some pages carry four actions. */}
       {action ? <div className="flex flex-wrap items-center gap-2 sm:justify-end">{action}</div> : null}
@@ -302,21 +303,26 @@ export function StatCard({
   tone?: 'default' | 'positive' | 'negative' | 'warning' | 'brand'
 }) {
   const tones = {
-    default: 'bg-slate-100 text-slate-600',
-    brand: 'bg-brand-50 text-brand-600',
-    positive: 'bg-emerald-50 text-emerald-600',
-    negative: 'bg-rose-50 text-rose-600',
-    warning: 'bg-amber-50 text-amber-600',
+    default: { icon: 'bg-slate-100 text-slate-600 ring-slate-200', accent: 'from-slate-300' },
+    brand: { icon: 'bg-brand-50 text-brand-600 ring-brand-100', accent: 'from-brand-400' },
+    positive: { icon: 'bg-emerald-50 text-emerald-600 ring-emerald-100', accent: 'from-emerald-400' },
+    negative: { icon: 'bg-rose-50 text-rose-600 ring-rose-100', accent: 'from-rose-400' },
+    warning: { icon: 'bg-amber-50 text-amber-600 ring-amber-100', accent: 'from-amber-400' },
   } as const
+  const t = tones[tone]
   return (
-    <Card className="p-4">
+    <Card className="relative overflow-hidden p-4">
+      {/* A thin tone-coloured edge keeps a row of stat cards scannable at a glance. */}
+      <span className={cn('absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r to-transparent', t.accent)} aria-hidden />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-          <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
-          {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
+          <p className="truncate text-xs font-medium text-slate-500">{label}</p>
+          <p className="mt-1.5 text-[1.75rem] font-semibold leading-none tracking-tight tabular-nums text-slate-900">
+            {value}
+          </p>
+          {hint ? <p className="mt-2 text-xs text-slate-500">{hint}</p> : null}
         </div>
-        <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', tones[tone])}>
+        <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset', t.icon)}>
           <Icon style={{ width: 18, height: 18 }} />
         </span>
       </div>
@@ -336,13 +342,16 @@ export function EmptyState({
   action?: ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
-        <Icon className="h-5 w-5" />
+    <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+      <span className="relative flex h-14 w-14 items-center justify-center">
+        <span className="absolute inset-0 rounded-2xl bg-gradient-to-br from-brand-100 to-slate-100" aria-hidden />
+        <span className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-white text-brand-600 shadow-sm ring-1 ring-slate-200/80">
+          <Icon className="h-5 w-5" />
+        </span>
       </span>
-      <h3 className="mt-4 text-sm font-semibold text-slate-900">{title}</h3>
-      {description ? <p className="mt-1 max-w-sm text-sm text-slate-500">{description}</p> : null}
-      {action ? <div className="mt-4">{action}</div> : null}
+      <h3 className="mt-5 text-base font-semibold text-slate-900">{title}</h3>
+      {description ? <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-slate-500">{description}</p> : null}
+      {action ? <div className="mt-5">{action}</div> : null}
     </div>
   )
 }
@@ -555,7 +564,7 @@ export function Modal({
   if (!open) return null
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 pt-[8vh] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex animate-fade-in items-start justify-center overflow-y-auto bg-ink-950/50 p-4 pt-[8vh] backdrop-blur-[2px]"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onCloseRef.current()
       }}
@@ -565,12 +574,12 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={cn('w-full rounded-xl border border-slate-200 bg-white shadow-pop', width)}
+        className={cn('w-full animate-pop-in overflow-hidden rounded-2xl bg-white shadow-pop ring-1 ring-slate-900/5', width)}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-            {description ? <p className="mt-0.5 text-xs text-slate-500">{description}</p> : null}
+        <div className="flex items-start justify-between gap-4 px-6 pb-3 pt-5">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+            {description ? <p className="mt-1 text-sm leading-relaxed text-slate-500">{description}</p> : null}
           </div>
           <button
             type="button"
@@ -581,9 +590,9 @@ export function Modal({
             <X className="h-4 w-4" />
           </button>
         </div>
-        {children ? <div className="px-5 py-4">{children}</div> : null}
+        {children ? <div className="px-6 pb-5 pt-2">{children}</div> : null}
         {footer ? (
-          <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50/60 px-5 py-3">
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/70 px-6 py-3.5">
             {footer}
           </div>
         ) : null}

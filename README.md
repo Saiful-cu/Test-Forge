@@ -28,7 +28,6 @@ out of `localStorage` automatically on first load.
 | **Feature Library** | 35 industries → feature groups → features, searchable across the whole library. Feature groups and features can be **created, renamed and deleted** here, and each feature opens its **own page**. |
 | **Feature page** | Overview first — description plus a one-line "how this works in practice". A **View in detail** toggle then expands an SVG **flowchart** (main path left to right, with the validation, permission and security branches that divert it hanging below), the written step-by-step sequence, a state lifecycle where the feature has one, the rules it must enforce, where it usually breaks, and what it connects to. |
 | **Feature page (test cases)** | One feature's full master test case list, with search and filters (scope, test type, priority), coverage and test-type breakdowns, add / edit / delete for its master test cases, and edit / delete for the feature itself. |
-| **Test Case Library** | Every master test case in a paginated table, filterable by category, module, feature, test type, priority and mandatory scope, and searchable by ID, title or description. Rows expand to the full specification and can be edited or deleted. |
 | **Reports** | Per-project report with totals, execution %, pass %, a status donut, feature-wise execution table, breakdowns by priority and test type, a failed/blocked worklist, and CSV export. A workspace roll-up lists every project. |
 
 The header search is global — it jumps to matching projects, features and master test cases

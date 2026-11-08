@@ -36,7 +36,7 @@ export function FeatureLibrary() {
   } = useMasterLibrary()
   const { isAdmin } = useAuth()
 
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(params.get('q') ?? '')
   const [categoryId, setCategoryId] = useState<string>(params.get('category') ?? MASTER_CATEGORIES[0].id)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [collapsedTiers, setCollapsedTiers] = useState<string[]>([])
@@ -96,7 +96,7 @@ export function FeatureLibrary() {
   const FeatureTile = ({ feature }: { feature: MasterFeature }) => (
     <Link
       to={`/features/${encodeURIComponent(feature.id)}`}
-      className="group flex h-full flex-col rounded-lg border border-slate-200 bg-white p-4 transition hover:border-brand-300 hover:shadow-card"
+      className="card card-interactive group flex h-full flex-col p-4 hover:border-brand-300"
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-medium text-slate-900 group-hover:text-brand-700">{feature.name}</p>
