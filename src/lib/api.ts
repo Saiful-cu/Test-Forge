@@ -22,7 +22,11 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 export const supabase: SupabaseClient | null = url && anonKey ? createClient(url, anonKey) : null
 
 // Supabase Auth is email-based; people sign in with a username, mapped to a synthetic address.
-const emailFor = (username: string) => `${username.trim().toLowerCase()}@testforge.local`
+// A real email address (e.g. a user added in the Supabase dashboard) is used as typed.
+const emailFor = (username: string) => {
+  const name = username.trim().toLowerCase()
+  return name.includes('@') ? name : `${name}@testforge.local`
+}
 
 function client(): SupabaseClient {
   if (!supabase) {
