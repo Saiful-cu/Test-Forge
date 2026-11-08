@@ -8,6 +8,7 @@ import {
   CircleSlash,
   FileCheck2,
   FolderKanban,
+  FolderOpen,
   Layers,
   Plus,
   RotateCcw,
@@ -41,6 +42,7 @@ import {
   type ExecStatus,
   type Priority,
   type Project,
+  type ProjectFeature,
   type ProjectTestCase,
   type TestType,
 } from '../types'
@@ -67,6 +69,7 @@ function ProjectWorkspace({ project }: { project: Project }) {
   const [testType, setTestType] = useState<string>(ALL)
   const [scope, setScope] = useState<string>(ALL)
   const [openFeatures, setOpenFeatures] = useState<string[]>([])
+  const [collapsedGroups, setCollapsedGroups] = useState<string[]>([])
   const [openCase, setOpenCase] = useState<string | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [versionsOpen, setVersionsOpen] = useState(false)
@@ -178,6 +181,165 @@ function ProjectWorkspace({ project }: { project: Project }) {
     setCustomFor(null)
   }
 
+  // Features are grouped by module (and by source category when pulled in from another one),
+  // in the order they first appear in the project.
+  const featureGroups = useMemo(() => {
+    const groups = new Map<string, { key: string; moduleName: string; categoryName: string | null; features: ProjectFeature[] }>()
+    for (const feature of project.features) {
+      const master = feature.masterFeatureId ? featureById.get(feature.masterFeatureId) : undefined
+      const categoryName = master && master.categoryId !== project.categoryId ? master.categoryName : null
+      const moduleName = feature.moduleName || (feature.isCustom ? 'Custom features' : 'Other')
+      const key = `${categoryName ?? ''}::${moduleName}`
+      const group = groups.get(key) ?? { key, moduleName, categoryName, features: [] }
+      group.features.push(feature)
+      groups.set(key, group)
+    }
+    return [...groups.values()]
+  }, [project.features, project.categoryId, featureById])
+
+  const toggleGroup = (key: string) =>
+    setCollapsedGroups((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]))
+
+  const renderFeature = (feature: ProjectFeature) => {
+    const all = byFeature.get(feature.id) ?? []
+    const shown = visibleByFeature.get(feature.id) ?? []
+    const fs = computeStats(all)
+    const open = openFeatures.includes(feature.id)
+    const hiddenByFilter = filtersActive && shown.length === 0
+
+    return (
+      <Card key={feature.id} className={cn('overflow-hidden', hiddenByFilter && 'opacity-60')}>
+        <div className="flex items-start gap-3 px-4 py-3.5">
+          <button
+            type="button"
+            onClick={() => toggleFeatureOpen(feature.id)}
+            aria-expanded={open}
+            aria-label={open ? `Collapse ${feature.name}` : `Expand ${feature.name}`}
+            className="mt-0.5 rounded p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+          >
+            <ChevronDown className={cn('h-4 w-4 transition', open ? 'rotate-0' : '-rotate-90')} />
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => toggleFeatureOpen(feature.id)}
+              className="block w-full text-left"
+            >
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold text-slate-900">{feature.name}</span>
+                {feature.isCustom ? (
+                  <Badge size="sm" className="bg-violet-50 text-violet-700 ring-violet-600/20">
+                    Custom feature
+                  </Badge>
+                ) : null}
+              </span>
+              <span className="mt-1 block line-clamp-1 text-xs text-slate-500">{feature.description}</span>
+            </button>
+
+            <div className="mt-2.5 flex items-center gap-3">
+              <StackedBar
+                className="max-w-xs flex-1"
+                segments={[
+                  { label: 'Pass', value: fs.pass, className: 'bg-emerald-500' },
+                  { label: 'Fail', value: fs.fail, className: 'bg-rose-500' },
+                  { label: 'Blocked', value: fs.blocked, className: 'bg-amber-500' },
+                  { label: 'Not Run', value: fs.notRun, className: 'bg-slate-200' },
+                ]}
+              />
+              <span className="shrink-0 text-2xs tabular-nums text-slate-500">
+                {fs.executed}/{fs.total} executed · {fs.executionPct}%
+              </span>
+            </div>
+          </div>
+
+          <div className="hidden shrink-0 items-center gap-1.5 sm:flex">
+            <Badge size="sm" className="bg-emerald-50 text-emerald-700 ring-emerald-600/20">
+              {fs.pass} pass
+            </Badge>
+            <Badge size="sm" className="bg-rose-50 text-rose-700 ring-rose-600/20">
+              {fs.fail} fail
+            </Badge>
+            <Badge size="sm" className="bg-amber-50 text-amber-700 ring-amber-600/20">
+              {fs.blocked} blocked
+            </Badge>
+            <Badge size="sm" className="bg-slate-100 text-slate-600 ring-slate-500/20">
+              {fs.notRun} not run
+            </Badge>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={Trash2}
+              aria-label={`Remove ${feature.name}`}
+              className="text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+              onClick={() => setRemoveTarget(feature.id)}
+            />
+          </div>
+        </div>
+
+        {open ? (
+          <div className="border-t border-slate-200">
+            {shown.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-slate-500">
+                {all.length === 0
+                  ? 'This feature has no test cases yet.'
+                  : 'No test cases in this feature match the current filters.'}
+              </p>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {shown.map((tc) => (
+                  <ProjectTestCaseRow
+                    key={tc.id}
+                    testCase={tc}
+                    expanded={openCase === tc.id}
+                    onToggle={() => setOpenCase(openCase === tc.id ? null : tc.id)}
+                    onPatch={(patch) => updateTestCase(project.id, tc.id, patch)}
+                    onDelete={() => setDeleteCase(tc)}
+                  />
+                ))}
+              </ul>
+            )}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50/60 px-4 py-2.5">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    setBulk({
+                      ids: shown.filter((tc) => tc.status === 'Not Run').map((tc) => tc.id),
+                      status: 'Pass',
+                      label: `mark as Pass in ${feature.name}`,
+                    })
+                  }
+                  disabled={shown.every((tc) => tc.status !== 'Not Run')}
+                >
+                  Mark shown not-run as Pass
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon={RotateCcw}
+                  onClick={() =>
+                    setBulk({
+                      ids: shown.map((tc) => tc.id),
+                      status: 'Not Run',
+                      label: `reset to Not Run in ${feature.name}`,
+                    })
+                  }
+                  disabled={shown.every((tc) => tc.status === 'Not Run')}
+                >
+                  Reset shown
+                </Button>
+              </div>
+              <Button size="sm" variant="primary" icon={Plus} onClick={() => setCustomFor(feature.id)}>
+                Add test case
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </Card>
+    )
+  }
+
   return (
     <>
       <div className="mb-4">
@@ -286,6 +448,7 @@ function ProjectWorkspace({ project }: { project: Project }) {
               onClick={() => {
                 setScope('mandatory')
                 setStatus(ALL)
+                setCollapsedGroups([])
                 setOpenFeatures(project.features.map((f) => f.id))
               }}
             >
@@ -396,157 +559,52 @@ function ProjectWorkspace({ project }: { project: Project }) {
           />
         </Card>
       ) : (
-        <div className="mt-4 space-y-3">
-          {project.features.map((feature) => {
-            const all = byFeature.get(feature.id) ?? []
-            const shown = visibleByFeature.get(feature.id) ?? []
-            const fs = computeStats(all)
-            const open = openFeatures.includes(feature.id)
-            const hiddenByFilter = filtersActive && shown.length === 0
-            // Features pulled in from another category are labelled, so the module name alone
-            // never leaves it unclear where a feature came from.
-            const master = feature.masterFeatureId ? featureById.get(feature.masterFeatureId) : undefined
-            const foreignCategory =
-              master && master.categoryId !== project.categoryId ? master.categoryName : null
+        <div className="mt-4 space-y-5">
+          {featureGroups.map((group) => {
+            const gs = computeStats(group.features.flatMap((f) => byFeature.get(f.id) ?? []))
+            const collapsed = collapsedGroups.includes(group.key)
+            const groupShown = group.features.reduce((n, f) => n + (visibleByFeature.get(f.id)?.length ?? 0), 0)
 
             return (
-              <Card key={feature.id} className={cn('overflow-hidden', hiddenByFilter && 'opacity-60')}>
-                <div className="flex items-start gap-3 px-4 py-3.5">
-                  <button
-                    type="button"
-                    onClick={() => toggleFeatureOpen(feature.id)}
-                    aria-expanded={open}
-                    aria-label={open ? `Collapse ${feature.name}` : `Expand ${feature.name}`}
-                    className="mt-0.5 rounded p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-                  >
-                    <ChevronDown className={cn('h-4 w-4 transition', open ? 'rotate-0' : '-rotate-90')} />
-                  </button>
-
-                  <div className="min-w-0 flex-1">
-                    <button
-                      type="button"
-                      onClick={() => toggleFeatureOpen(feature.id)}
-                      className="block w-full text-left"
-                    >
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold text-slate-900">{feature.name}</span>
-                        <Badge size="sm" className="bg-slate-100 text-slate-600 ring-slate-500/20">
-                          {feature.moduleName}
-                        </Badge>
-                        {foreignCategory ? (
-                          <Badge size="sm" className="bg-amber-50 text-amber-700 ring-amber-600/20">
-                            {foreignCategory}
-                          </Badge>
-                        ) : null}
-                        {feature.isCustom ? (
-                          <Badge size="sm" className="bg-violet-50 text-violet-700 ring-violet-600/20">
-                            Custom feature
-                          </Badge>
-                        ) : null}
-                      </span>
-                      <span className="mt-1 block line-clamp-1 text-xs text-slate-500">{feature.description}</span>
-                    </button>
-
-                    <div className="mt-2.5 flex items-center gap-3">
-                      <StackedBar
-                        className="max-w-xs flex-1"
-                        segments={[
-                          { label: 'Pass', value: fs.pass, className: 'bg-emerald-500' },
-                          { label: 'Fail', value: fs.fail, className: 'bg-rose-500' },
-                          { label: 'Blocked', value: fs.blocked, className: 'bg-amber-500' },
-                          { label: 'Not Run', value: fs.notRun, className: 'bg-slate-200' },
-                        ]}
-                      />
-                      <span className="shrink-0 text-2xs tabular-nums text-slate-500">
-                        {fs.executed}/{fs.total} executed · {fs.executionPct}%
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="hidden shrink-0 items-center gap-1.5 sm:flex">
-                    <Badge size="sm" className="bg-emerald-50 text-emerald-700 ring-emerald-600/20">
-                      {fs.pass} pass
-                    </Badge>
-                    <Badge size="sm" className="bg-rose-50 text-rose-700 ring-rose-600/20">
-                      {fs.fail} fail
-                    </Badge>
+              <section key={group.key} className={cn(filtersActive && groupShown === 0 && 'opacity-60')}>
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.key)}
+                  aria-expanded={!collapsed}
+                  className="mb-2 flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-lg px-1 py-1.5 text-left transition hover:bg-slate-100/70"
+                >
+                  <ChevronDown className={cn('h-4 w-4 shrink-0 text-slate-400 transition', collapsed && '-rotate-90')} />
+                  <FolderOpen className="h-4 w-4 shrink-0 text-brand-600" />
+                  <span className="text-sm font-semibold text-slate-800">{group.moduleName}</span>
+                  {group.categoryName ? (
                     <Badge size="sm" className="bg-amber-50 text-amber-700 ring-amber-600/20">
-                      {fs.blocked} blocked
+                      {group.categoryName}
                     </Badge>
-                    <Badge size="sm" className="bg-slate-100 text-slate-600 ring-slate-500/20">
-                      {fs.notRun} not run
-                    </Badge>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      icon={Trash2}
-                      aria-label={`Remove ${feature.name}`}
-                      className="text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-                      onClick={() => setRemoveTarget(feature.id)}
+                  ) : null}
+                  <Badge size="sm" className="bg-slate-100 text-slate-600 ring-slate-500/20">
+                    {group.features.length} {group.features.length === 1 ? 'feature' : 'features'}
+                  </Badge>
+                  <span className="ml-auto flex items-center gap-3">
+                    <StackedBar
+                      className="hidden w-32 sm:flex"
+                      segments={[
+                        { label: 'Pass', value: gs.pass, className: 'bg-emerald-500' },
+                        { label: 'Fail', value: gs.fail, className: 'bg-rose-500' },
+                        { label: 'Blocked', value: gs.blocked, className: 'bg-amber-500' },
+                        { label: 'Not Run', value: gs.notRun, className: 'bg-slate-200' },
+                      ]}
                     />
+                    <span className="text-2xs tabular-nums text-slate-500">
+                      {gs.executed}/{gs.total} executed · {gs.executionPct}%
+                    </span>
+                  </span>
+                </button>
+                {collapsed ? null : (
+                  <div className="space-y-3 border-l-2 border-slate-200 pl-3 sm:ml-2 sm:pl-4">
+                    {group.features.map(renderFeature)}
                   </div>
-                </div>
-
-                {open ? (
-                  <div className="border-t border-slate-200">
-                    {shown.length === 0 ? (
-                      <p className="px-4 py-6 text-center text-sm text-slate-500">
-                        {all.length === 0
-                          ? 'This feature has no test cases yet.'
-                          : 'No test cases in this feature match the current filters.'}
-                      </p>
-                    ) : (
-                      <ul className="divide-y divide-slate-100">
-                        {shown.map((tc) => (
-                          <ProjectTestCaseRow
-                            key={tc.id}
-                            testCase={tc}
-                            expanded={openCase === tc.id}
-                            onToggle={() => setOpenCase(openCase === tc.id ? null : tc.id)}
-                            onPatch={(patch) => updateTestCase(project.id, tc.id, patch)}
-                            onDelete={() => setDeleteCase(tc)}
-                          />
-                        ))}
-                      </ul>
-                    )}
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50/60 px-4 py-2.5">
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            setBulk({
-                              ids: shown.filter((tc) => tc.status === 'Not Run').map((tc) => tc.id),
-                              status: 'Pass',
-                              label: `mark as Pass in ${feature.name}`,
-                            })
-                          }
-                          disabled={shown.every((tc) => tc.status !== 'Not Run')}
-                        >
-                          Mark shown not-run as Pass
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          icon={RotateCcw}
-                          onClick={() =>
-                            setBulk({
-                              ids: shown.map((tc) => tc.id),
-                              status: 'Not Run',
-                              label: `reset to Not Run in ${feature.name}`,
-                            })
-                          }
-                          disabled={shown.every((tc) => tc.status === 'Not Run')}
-                        >
-                          Reset shown
-                        </Button>
-                      </div>
-                      <Button size="sm" variant="primary" icon={Plus} onClick={() => setCustomFor(feature.id)}>
-                        Add test case
-                      </Button>
-                    </div>
-                  </div>
-                ) : null}
-              </Card>
+                )}
+              </section>
             )
           })}
 
